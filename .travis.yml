@@ -1,0 +1,30 @@
+sudo: true
+os: trusty
+cache: false
+env:
+  matrix:
+  - URL=https://developer.salesforce.com/media/salesforce-cli/sfdx-linux-amd64.tar.xz
+  global:
+  - secure: ff98E93Cpcadu+Sli6DUGw452D4vGY1zF3hFeSaiL9FZC9prPmLnqn4s/3GezWvDOwrcHpe37O5beRLCB7DbXINbeypxd0YAPnoizV66Fk+vZicoW1HlFjJ4Fyd3vg5aUecyj9OBmpc6OQsxrZaAhQqSSckD6uBMlW5ZdF3fJgpDeTyekI/uCPYnENs8pdPip2WZsWiV2HIqapf9NH0VJnQNJW8JRoSWVwOE8eX/NZFpqDDrE8lvHZcMlybD/tVRQZl3ypmCKzEvGOtO5VmERXKLMpSDPUIlRVFyavj6+v9AR3FACJz+fy4Z8uxitwpiihLj5zBLXECG/GhsEJygCJak03+grLx1mQM8RkdTNKaUMY8P2tocZybmIZPFgXMFjB+OqraykcHu74qMPxOnodDbLPFXf0a0XOWNzeYq088OaIHS6pAiqrylPriTwWEB/tM/eIPEBUu4O6SH26bz09VjnuqxCSE7K/RbuL3HHGNtcl6gYH8xl1q7MOb9nfTu5LWs4ItsBpihU63mWNihtUeEswxoL2iTmMExq0FautnylLLL1sekUNyFD6rddSv9k/Obi8GZ6MyhNMqE66GgwHHPeBU2H4EvB4yJO8yFXx/zV8hezPe+7uYr2MOBcAEcimVVO2nahe5s1gLIPkfWrNAj+LTEcS9baRdvfi8aFXM=
+  - secure: BJQSo0RmiMnrJ0vvOX1bvVGUD7tD0zWdeSIRfoNTcbSgw9S/1xNTIf/FOou2bI/vaTspSG4lkDCLL0euus5xEmbDyUFyXzcwAiw8Dv3NGQBLN1xYHOUiAWOekV+yig5hs/0Ts6YsFFsi1yEFAkwPyGdm2ruNol9lj3Bsk3l6osAV18Wd/i9lVcKIh9a4KnRl/WptEoezEZMtvUCr01ZnWts5AASAP04TpWE2f7iMa/Wv/dDodrXSmV1t1PVY1OEexInA3ek/P0ZYup6Nq6pIZ1R8jd8BN5YEB01zQi32v6ihHX8j4xfAqZ1rybjlVyM0rqltYQUqBZsvHLnwFWiYBvbd2h5nfgMlQOl4s65W2OOpxLpRZ/2WrlFn0iaKLyB9nJntcGSgqGvrOMi1ipnmrZFzAWggQVV6xY1HNX8EHMcVLCZTvQXfdjt8SgNwmxVeRj8q8EEOSoHsA5h+uEEftOf97AO+KwPARl8b6n3+BfO/0d++0qOBXSKXnqKChyaL0HEQDqMgrVy/xWK/y0wAvAy63Ccv40WQFkHpKqSatV2NdVLh04RzwgZalAqTj8dnYc2sv8KJhghHt2Bj882Zyt1/nZq6oSz60rEDU5AlDL8U30QnrguE61qpn8ytw8sRYdOOcty9+1YJQjRir014nc9GXoekh3Hg5CdJsgsK2GM=
+before_install:
+- export SFDX_AUTOUPDATE_DISABLE=false
+- export SFDX_USE_GENERIC_UNIX_KEYCHAIN=true
+- export SFDX_DOMAIN_RETRY=300
+- export SFDX_DISABLE_APP_HUB=true
+- export SFDX_LOG_LEVEL=DEBUG
+- mkdir sfdx
+- wget -qO- $URL | tar xJ -C sfdx --strip-components 1
+- "./sfdx/install"
+- export PATH=./sfdx/$(pwd):$PATH
+- sfdx --version
+- sfdx plugins --core
+- sfdx force:auth:jwt:grant --clientid $CONSUMERKEY --jwtkeyfile assets/server.key
+  --username $USERNAME --setdefaultdevhubusername -a HubOrg
+script:
+- sfdx force:org:create -v HubOrg -s -f config/project-scratch-def.json -a ciorg --wait
+  2
+- sfdx force:org:display -u ciorg
+- sfdx force:source:push -u ciorg
+- sfdx force:apex:test:run -u ciorg --wait 10
+- sfdx force:org:delete -u ciorg -p
